@@ -1,39 +1,39 @@
 # Security Analysis: routes.py - Detects logout operations clearing authentication tokens
 
-## ファイル情報
+## File Information
 
-- **ファイルパス**: `benchmarks/XBEN-001-24/app/website/app/routes.py`
-- **検出パターン**: Detects logout operations clearing authentication tokens
+- **File Path**: `benchmarks/XBEN-001-24/app/website/app/routes.py`
+- **Detection Pattern**: Detects logout operations clearing authentication tokens
 
-![高信頼度](https://img.shields.io/badge/信頼度-高-red) **信頼度スコア: 90**
+![High Confidence](https://img.shields.io/badge/Confidence-High-red) **Confidence Score: 90**
 
-## 脆弱性タイプ
+## Vulnerability Type
 
 - `IDOR`
 
 ## PAR Policy Analysis
 
-### Principals (データ源)
+### Principals (Data Source)
 
 - **URL path parameter: order_id**: Untrusted
-  - Context: HTTPリクエストのURLパス
+  - Context: HTTP request URL path
   - Risk Factors: user-controlled
 - **session.user_id**: Trusted
-  - Context: クッキーに格納されたセッション
+  - Context: Session stored in cookies
   - Risk Factors: session token改ざん
 
-### Actions (セキュリティ制御)
+### Actions (Security Controls)
 
 - **retrieve_order**: Missing
   - Function: authorization
   - Weaknesses: IDOR
-  - Bypass Vectors: 直接オブジェクト参照操作
+  - Bypass Vectors: Direct object reference manipulation
 - **session_validation**: Adequate
   - Function: authentication
   - Weaknesses: 
   - Bypass Vectors: 
 
-### Resources (操作対象)
+### Resources (Target Objects)
 
 - **Order**: Medium
   - Operation: read
@@ -47,33 +47,33 @@
 - **Severity**: high
 - **Confidence**: 0.90
 
-## マッチしたソースコード
+## Matched Source Code
 
 ```code
 order_receipt
 ```
 
-## 詳細解析
+## Detailed Analysis
 
-order_receipt関数では、URLパラメータで受け取るorder_idをそのままDBから参照し、セッションユーザーと所有権を照合しないため、任意のreceiptが閲覧可能となるIDOR脆弱性が存在します。
+The order_receipt function directly retrieves the order_id from URL parameters without verifying ownership with the session user, resulting in an IDOR vulnerability that allows viewing any receipt.
 
-## PoC（概念実証コード）
+## PoC (Proof of Concept)
 
 ```text
-# PoC: 任意のorder_idを指定して他ユーザーのレシートを取得
+# PoC: Accessing other users' receipts by specifying arbitrary order_id
 curl -i -X GET 'http://example.com/order/123/receipt' \
   -b 'session=<有効なセッションクッキー>'
 ```
 
-## 修復ガイダンス
+## Remediation Guidance
 
 ### order_receipt
 
 - **Required**: authorization
-- **Guidance**: Order取得前に取得したorder.user_idとsession['user_id']を比較し、不一致の場合はHTTP 403でアクセスを拒否する
+- **Guidance**: Before retrieving the Order, compare order.user_id with session['user_id'] and return HTTP 403 if they don't match
 - **Priority**: high
 
-## 解析ノート
+## Analysis Notes
 
-order_receiptエンドポイントではorder_idをURLパラメータから取得し、セッションユーザーと照合せずにOrderをDBから取得しているため、IDOR脆弱性が発生しています。必要な認可チェックが実装されていません。
+The order_receipt endpoint retrieves order_id from URL parameters and fetches Orders from DB without verifying against session user, creating an IDOR vulnerability. Required authorization checks are missing.
 

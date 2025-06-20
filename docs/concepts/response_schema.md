@@ -1,133 +1,134 @@
-# LLM response schema
+# LLM Response Schema
 
-本文書では、Parsentryでsecurity脆弱性をreportする際にLLMが従わなければならない構造化出力形式を定義します。
+This document defines the structured output format that LLMs must follow when reporting security vulnerabilities in Parsentry.
 
-## 概要
+## Overview
 
-Parsentryは以下を保証するためにLLM responseの厳密なJSON schemaを強制します：
-- 一貫した脆弱性report
-- 自動解析と処理
-- 実用的なsecurity発見
-- CI/CD pipelineとの統合
+Parsentry enforces a strict JSON schema for LLM responses to ensure:
+- Consistent vulnerability reporting
+- Automated analysis and processing
+- Actionable security findings
+- Integration with CI/CD pipelines
 
-## schema定義
+## Schema Definition
 
-### 完全なJSON構造
+### Complete JSON Structure
 
 ```json
 {
-  "scratchpad": "string - 解析思考プロセスと推論",
-  "analysis": "string - 詳細な脆弱性説明",
-  "poc": "string - 概念実証悪用コード",
-  "confidence_score": "integer - 信頼度レベル (0-10)",
-  "vulnerability_types": ["脆弱性タイプ文字列の配列"],
+  "scratchpad": "string - Analysis thought process and reasoning",
+  "analysis": "string - Detailed vulnerability explanation",
+  "poc": "string - Proof-of-concept exploit code",
+  "confidence_score": "integer - Confidence level (0-10)",
+  "vulnerability_types": ["Array of vulnerability type strings"],
   "context_code": [
     {
-      "name": "string - 関数/クラス/メソッド名",
-      "reason": "string - このコードが脆弱な理由",
-      "code_line": "string - 実際の脆弱なコード"
+      "name": "string - Function/class/method name",
+      "reason": "string - Why this code is vulnerable",
+      "code_line": "string - Actual vulnerable code"
     }
   ]
 }
 ```
 
-### field仕様
+### Field Specifications
 
-#### 1. Scratchpad（必須）
-- **型**: 文字列
-- **目的**: LLMの解析processを捕捉
-- **内容**: 段階的推論、data flow解析、security考慮事項
-- **例**:
+#### 1. Scratchpad (Required)
+- **Type**: String
+- **Purpose**: Capture LLM's analysis process
+- **Content**: Step-by-step reasoning, data flow analysis, security considerations
+- **Example**:
 ```json
-"scratchpad": "1. リクエストパラメータ'id'からユーザー入力を識別\n2. SQLクエリ構築へのフローを追跡\n3. パラメータ化が見つからない\n4. 直接文字列連結を確認\n5. SQLインジェクション脆弱性を確認"
+"scratchpad": "1. Identified user input from request parameter 'id'\n2. Traced flow into SQL query construction\n3. Found no parameterization\n4. Confirmed direct string concatenation\n5. Verified SQL injection vulnerability"
 ```
 
-#### 2. Analysis（必須）
-- **型**: 文字列
-- **目的**: 包括的な脆弱性説明
-- **内容**: 
-  - 根本原因分析
-  - 攻撃ベクター
-  - 潜在的影響
-  - ビジネスリスク評価
-- **例**:
+#### 2. Analysis (Required)
+- **Type**: String
+- **Purpose**: Comprehensive vulnerability explanation
+- **Content**: 
+  - Root cause analysis
+  - Attack vectors
+  - Potential impact
+  - Business risk assessment
+- **Example**:
 ```json
-"analysis": "get_user関数のSQLインジェクション脆弱性。'id'パラメータからのユーザー入力がサニタイゼーションなしにSQLクエリに直接連結されています。攻撃者は悪意のあるSQLを注入して機密データを抽出、レコードを変更、またはデータベースコマンドを実行できます。影響：データベース全体の侵害が可能。"
+"analysis": "SQL injection vulnerability in get_user function. User input from 'id' parameter is directly concatenated into SQL query without sanitization. Attackers can inject malicious SQL to extract sensitive data, modify records, or execute database commands. Impact: Full database compromise possible."
 ```
 
-#### 3. 概念実証（必須）
-- **型**: 文字列
-- **目的**: 悪用可能性を実証
-- **内容**: 動作する悪用コードまたは明確な悪用手順
-- **形式**: コードスニペット、curlコマンド、または段階的指示
-- **例**:
+#### 3. Proof of Concept (Required)
+- **Type**: String
+- **Purpose**: Demonstrate exploitability
+- **Content**: Working exploit code or clear exploitation steps
+- **Format**: Code snippets, curl commands, or step-by-step instructions
+- **Example**:
 ```json
-"poc": "curl 'http://example.com/user?id=1 OR 1=1--' \n# 全ユーザーを返す\ncurl 'http://example.com/user?id=1 UNION SELECT password FROM admins--'\n# 管理者パスワードを抽出"
+"poc": "curl 'http://example.com/user?id=1 OR 1=1--' \n# Returns all users\ncurl 'http://example.com/user?id=1 UNION SELECT password FROM admins--'\n# Extracts admin passwords"
 ```
 
-#### 4. 信頼度スコア（必須）
-- **型**: 整数 (0-10)
-- **目的**: 解析の確実性を示す
-- **scoringガイド**:
-  - 0-3: 低信頼度、検証が必要
-  - 4-6: 中程度の信頼度、脆弱である可能性が高い
-  - 7-9: 高信頼度、脆弱性確認済み
-  - 10: 確実、動作するPoCあり
-- **例**: `8`
+#### 4. Confidence Score (Required)
+- **Type**: Integer (0-10)
+- **Purpose**: Indicate certainty of analysis
+- **Scoring Guide**:
+  - 0-3: Low confidence, requires verification
+  - 4-6: Medium confidence, likely vulnerable
+  - 7-9: High confidence, vulnerability confirmed
+  - 10: Certain, with working PoC
+- **Example**: `8`
 
-#### 5. 脆弱性タイプ（必須）
-- **型**: 文字列の配列
-- **目的**: 発見を分類
-- **許可される値**:
-  - `"LFI"` - ローカルファイルインクルージョン
-  - `"RCE"` - リモートコード実行
-  - `"SSRF"` - サーバーサイドリクエストフォージェリ
-  - `"AFO"` - 任意ファイル操作
-  - `"SQLI"` - SQLインジェクション
-  - `"XSS"` - クロスサイトスクリプティング
-  - `"IDOR"` - 安全でない直接オブジェクト参照
-- **例**: `["SQLI", "IDOR"]`
+#### 5. Vulnerability Types (Required)
+- **Type**: Array of strings
+- **Purpose**: Classify findings
+- **Allowed Values**:
+  - `"LFI"` - Local File Inclusion
+  - `"RCE"` - Remote Code Execution
+  - `"SSRF"` - Server-Side Request Forgery
+  - `"AFO"` - Arbitrary File Operations
+  - `"SQLI"` - SQL Injection
+  - `"XSS"` - Cross-Site Scripting
+  - `"IDOR"` - Insecure Direct Object Reference
+- **Example**: `["SQLI", "IDOR"]`
 
-#### 6. コンテキストコード（必須）
-- **型**: オブジェクトの配列
-- **目的**: 発見を特定のコードにリンク
-- **オブジェクト構造**:
-  - `name`: 脆弱なコンポーネントの識別子
-  - `reason`: 脆弱性関連性の説明
-  - `code_line`: 実際の脆弱なコードスニペット
-  - `path`: ファイルパス（現在の実装で追加）
-- **例**:
+#### 6. Context Code (Required)
+- **Type**: Array of objects
+- **Purpose**: Link findings to specific code
+- **Object Structure**:
+  - `name`: Identifier of vulnerable component
+  - `reason`: Explanation of vulnerability relevance
+  - `code_line`: Actual vulnerable code snippet
+  - `path`: File path (added in current implementation)
+- **Example**:
 ```json
 "context_code": [
   {
     "name": "get_user",
-    "reason": "サニタイズされていない入力でSQLクエリを構築",
+    "reason": "Constructs SQL query with unsanitized input",
     "code_line": "query = \"SELECT * FROM users WHERE id = \" + request.params.id",
     "path": "src/database.py"
   },
   {
     "name": "execute_query", 
-    "reason": "脆弱なクエリを実行",
+    "reason": "Executes vulnerable query",
     "code_line": "results = db.execute(query)",
     "path": "src/database.py"
   }
 ]
 ```
 
-## Complete Example Response
+## Complete Response Example
 
 ```json
 {
-  "scratchpad": "Analyzing Flask route /api/user/<id>. User input 'id' flows directly into SQL query construction via string formatting. No input validation or parameterized queries used. Database appears to be MySQL based on syntax.",
-  "analysis": "Critical SQL Injection vulnerability in user lookup endpoint. The 'id' parameter is inserted directly into SQL query using string formatting, allowing attackers to inject arbitrary SQL. This could lead to unauthorized data access, data manipulation, or complete database takeover.",
-  "poc": "# Extract all users:\ncurl 'http://localhost:5000/api/user/1%20OR%201=1'\n\n# Extract passwords:\ncurl 'http://localhost:5000/api/user/1%20UNION%20SELECT%20username,password%20FROM%20users--'",
+  "scratchpad": "1. Analyzed /profile endpoint\n2. 'filename' parameter is unvalidated\n3. Confirmed file path manipulation\n4. Directory traversal possible",
+  "analysis": "Local File Inclusion vulnerability. Profile image upload feature doesn't properly validate 'filename' parameter, allowing relative paths (e.g., '../../../etc/passwd'). Attackers can read system files.",
+  "poc": "curl -X POST 'http://example.com/profile' -F 'filename=../../../etc/passwd' -F 'image=@test.jpg'",
   "confidence_score": 9,
-  "vulnerability_types": ["SQLI"],
+  "vulnerability_types": ["LFI"],
   "context_code": [
     {
-      "name": "get_user",
-      "reason": "Vulnerable SQL query construction",
-      "code_line": "cursor.execute(f\"SELECT * FROM users WHERE id = {user_id}\")"
+      "name": "save_profile_image",
+      "reason": "Performs file operations with unvalidated filename",
+      "code_line": "file.save(os.path.join(UPLOAD_FOLDER, filename))",
+      "path": "src/profile.py"
     }
   ]
 }
@@ -135,48 +136,40 @@ Parsentryは以下を保証するためにLLM responseの厳密なJSON schemaを
 
 ## Validation Rules
 
-### Required Fields
-All six top-level fields must be present in every response.
-
-### Type Constraints
-- Strings must be non-empty
-- `confidence_score` must be integer 0-100 (normalized from 0-10 input)
-- `vulnerability_types` must contain valid enum values
-- `context_code` must have at least one entry if vulnerability found
-- `context_code.path` field is required in current implementation
-
-### Content Guidelines
-- `scratchpad`: Include actual analysis steps
-- `analysis`: Be specific about impact and risk
-- `poc`: Provide executable/testable code
-- `context_code`: Reference actual line numbers when possible
+1. **Required Fields Check**: All mandatory fields must exist with correct types
+2. **Confidence Score Validation**: Must be within 0-10 range
+3. **Vulnerability Types Validation**: Only allowed values are included
+4. **Context Code Integrity**: Each code reference must contain name/reason/code_line
+5. **PoC Validation**: Exploitation method must be clearly explained
 
 ## Error Handling
 
-### Common Parsing Errors
+### Common Error Format
 
-1. **Missing Required Field**
 ```json
 {
-  "analysis": "...",
-  "poc": "..."
-  // Missing other required fields
+  "error": true,
+  "code": "Error code",
+  "message": "Human-readable error message",
+  "details": {
+    "field": "Problematic field name",
+    "requirement": "Unmet requirement"
+  }
 }
 ```
 
-2. **Invalid Vulnerability Type**
-```json
-{
-  "vulnerability_types": ["SQLi"]  // Should be "SQLI"
-}
-```
+## Error Handling
 
-3. **Wrong Type**
-```json
-{
-  "confidence_score": "high"  // Should be integer
-}
-```
+### Error Codes
+
+| Code | Description |
+|-------|------|
+| `SCHEMA_001` | Missing required field |
+| `SCHEMA_002` | Field type mismatch |
+| `SCHEMA_003` | Confidence score out of range |
+| `SCHEMA_004` | Invalid vulnerability type |
+| `SCHEMA_005` | Incomplete context code |
+| `SCHEMA_006` | Insufficient PoC |
 
 ### Schema Validation
 
@@ -190,23 +183,26 @@ The schema is enforced by:
 
 ## Best Practices
 
-### For Clear Analysis
-- Start scratchpad with input identification
-- Trace data flow systematically
-- Note validation attempts (or lack thereof)
-- Consider all attack vectors
+1. **Scratchpad**: Clearly describe step-by-step reasoning
+2. **Analysis**: Cover both technical details and business impact
+3. **PoC**: Provide actually working exploit code
+4. **Confidence**: Assign appropriate score (don't overestimate)
+5. **Context Code**: Precisely identify code locations
 
-### For Effective PoCs
-- Make exploits copy-pasteable
-- Include expected output
-- Cover multiple attack scenarios
-- Test edge cases
+## Integration Guide
 
-### For Accurate Context
-- Include function signatures
-- Show variable declarations
-- Highlight data flow paths
-- Reference line numbers
+### CI/CD Pipeline
+
+1. Parse JSON response
+2. Trigger warnings/failures based on confidence scores
+3. Integrate results into security dashboard
+4. Automatically generate tickets
+
+### Developer Feedback
+
+1. Directly link code references to IDE
+2. Provide remediation guidance
+3. Recommend relevant training resources
 
 ## Integration Notes
 
@@ -224,9 +220,7 @@ The schema is enforced by:
 
 ## Future Extensions
 
-Potential schema enhancements:
-- CVSS scoring fields
-- Remediation suggestions
-- Reference links
-- Affected versions
-- Patch recommendations
+1. **Remediation Suggestions**: Add automated fix recommendation field
+2. **Impact Score**: Standardized impact assessment based on CVSS
+3. **Trend Analysis**: Correlation with historical vulnerability data
+4. **Team-Specific Classification**: Support organization-specific tagging

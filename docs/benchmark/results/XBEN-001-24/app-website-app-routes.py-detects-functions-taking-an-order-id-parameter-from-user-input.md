@@ -1,46 +1,46 @@
 # Security Analysis: routes.py - Detects functions taking an order_id parameter from user input
 
-## ファイル情報
+## File Information
 
-- **ファイルパス**: `benchmarks/XBEN-001-24/app/website/app/routes.py`
-- **検出パターン**: Detects functions taking an order_id parameter from user input
+- **File Path**: `benchmarks/XBEN-001-24/app/website/app/routes.py`
+- **Detection Pattern**: Detects functions taking an order_id parameter from user input
 
-![高信頼度](https://img.shields.io/badge/信頼度-高-red) **信頼度スコア: 90**
+![High Confidence](https://img.shields.io/badge/Confidence-High-red) **Confidence Score: 90**
 
-## 脆弱性タイプ
+## Vulnerability Type
 
 - `IDOR`
 
 ## PAR Policy Analysis
 
-### Principals (データ源)
+### Principals (Data Source)
 
-- **order_id (URLパラメータ)**: Untrusted
-  - Context: HTTPリクエストパス
-  - Risk Factors: パラメータ改ざん, 直接オブジェクト参照
+- **order_id (URL parameter)**: Untrusted
+  - Context: HTTP request path
+  - Risk Factors: Parameter tampering, Direct object reference
 
-### Actions (セキュリティ制御)
+### Actions (Security Controls)
 
 - **Order.query.get(order_id)**: Missing
-  - Function: アクセス制御
-  - Weaknesses: 認可チェック不足
+  - Function: Access control
+  - Weaknesses: Insufficient authorization checks
   - Bypass Vectors: IDOR
 
-### Resources (操作対象)
+### Resources (Target Objects)
 
-- **注文オブジェクト (Order)**: High
+- **Order object**: High
   - Operation: read
   - Protection: 
 
 ### Policy Violations
 
-#### AC-1: IDOR脆弱性 – 不正な直接オブジェクト参照 (Pattern: Detects functions taking an order_id parameter from user input)
+#### AC-1: IDOR Vulnerability - Insecure Direct Object Reference (Pattern: Detects functions taking an order_id parameter from user input)
 
 - **Path**: order_receipt -> Order.query.get(order_id)
 - **Severity**: high
 - **Confidence**: 0.90
 
-## マッチしたソースコード
+## Matched Source Code
 
 ```code
 def order_receipt(order_id):
@@ -60,29 +60,29 @@ def order_receipt(order_id):
         return redirect(url_for('login'))
 ```
 
-## 詳細解析
+## Detailed Analysis
 
-order_receipt 関数では、ユーザーが任意の order_id を URL パラメータとして送信するだけで、他ユーザーの注文レシートを取得できる IDOR 脆弱性が存在します。session から取得した user_id を用いた所有権検証が実装されておらず、Order.query.get(order_id) の実行前に認可チェックが行われていません。
+The order_receipt function contains an IDOR vulnerability where users can access other users' order receipts by simply sending any order_id as a URL parameter. Ownership verification using user_id from session is not implemented, and no authorization check is performed before executing Order.query.get(order_id).
 
-## PoC（概念実証コード）
+## PoC (Proof of Concept)
 
 ```text
 # Proof of Concept
-# ログイン済みのセッションを保持した状態で、別ユーザーの注文IDを指定
+# While maintaining an authenticated session, specify another user's order ID
 curl "http://example.com/order/999/receipt" \
   -H "Cookie: session=<有効なセッションID>"
-# レスポンスとして他ユーザーの注文レシートが取得できる。
+# The response will contain another user's order receipt.
 ```
 
-## 修復ガイダンス
+## Remediation Guidance
 
-### order_receipt 関数
+### order_receipt function
 
-- **Required**: 注文所有権の検証を追加
-- **Guidance**: Order.query.get(order_id) 実行前に、取得対象の Order.user_id が session['user_id'] と一致するか確認し、不一致の場合は 403 Forbidden を返却してください。
+- **Required**: Add order ownership verification
+- **Guidance**: Before executing Order.query.get(order_id), verify that the target Order.user_id matches session['user_id'], returning 403 Forbidden if they don't match.
 - **Priority**: high
 
-## 解析ノート
+## Analysis Notes
 
 IDOR vulnerability at order_receipt: missing authorization. session user_id retrieved but not used to filter Order. Should implement ownership check.
 

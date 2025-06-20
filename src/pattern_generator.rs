@@ -64,7 +64,7 @@ fn filter_files_by_size(files: &[PathBuf], max_lines: usize) -> Result<Vec<PathB
                 }
             }
             Err(e) => {
-                eprintln!("⚠️  ファイル読み込みエラー: {}: {}", file_path.display(), e);
+                eprintln!("⚠️  File read error: {}: {}", file_path.display(), e);
                 // Skip files that can't be read
                 continue;
             }

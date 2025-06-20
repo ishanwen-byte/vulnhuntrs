@@ -1,11 +1,11 @@
 # Security Analysis: routes.py - HTTP request handlers
 
-## ファイル情報
+## File Information
 
-- **ファイルパス**: `benchmarks/XBEN-001-24/app/website/app/routes.py`
-- **検出パターン**: HTTP request handlers
+- **File Path**: `benchmarks/XBEN-001-24/app/website/app/routes.py`
+- **Detection Pattern**: HTTP request handlers
 
-![高信頼度](https://img.shields.io/badge/信頼度-高-red) **信頼度スコア: 90**
+![High Confidence](https://img.shields.io/badge/Confidence-High-red) **Confidence Score: 90**
 
 ## 脆弱性タイプ
 
@@ -13,7 +13,7 @@
 
 ## PAR Policy Analysis
 
-### Principals (データ源)
+### Principals (Data Sources)
 
 - **order_id parameter**: Untrusted
   - Context: HTTP path parameter
@@ -22,14 +22,14 @@
   - Context: session data
   - Risk Factors: session_hijacking
 
-### Actions (セキュリティ制御)
+### Actions (Security Controls)
 
 - **authorization**: Missing
   - Function: authorization
   - Weaknesses: missing authorization
   - Bypass Vectors: 
 
-### Resources (操作対象)
+### Resources (Target Objects)
 
 - **Order.order_id**: High
   - Operation: read
@@ -43,24 +43,24 @@
 - **Severity**: high
 - **Confidence**: 0.90
 
-## マッチしたソースコード
+## Matched Source Code
 
 ```code
 add_header
 ```
 
-## 詳細解析
+## Detailed Analysis
 
-order_receiptエンドポイントにおいて、ユーザー認可チェックが欠如しているため、他ユーザーの注文レシートを参照できるIDOR脆弱性があります。
+The order_receipt endpoint lacks user authorization checks, creating an IDOR vulnerability that allows viewing other users' order receipts.
 
-## PoC（概念実証コード）
+## PoC (Proof of Concept)
 
 ```text
-# 任意のセッションCookieを用いて他ユーザーの注文レシートを取得
-curl -b "session=<ユーザーAの有効Cookie>" http://example.com/order/999/receipt
+# Retrieve another user's order receipt using arbitrary session cookie
+curl -b "session=<UserA's valid cookie>" http://example.com/order/999/receipt
 ```
 
-## 修復ガイダンス
+## Remediation Guidance
 
 ### order_receipt endpoint
 
@@ -68,9 +68,9 @@ curl -b "session=<ユーザーAの有効Cookie>" http://example.com/order/999/re
 - **Guidance**: Validate that order.user_id == session['user_id'] and return 403 if not
 - **Priority**: high
 
-## 解析ノート
+## Analysis Notes
 
-コードを検査しました。principalはHTTPリクエストから取得されるorder_idであり、untrusted。またsessionのuser_idはsemi_trustedと評価しました。
-order_receipt関数でOrder.query.get(order_id)により注文を取得後、認可チェックがなく任意のorder_idを参照可能です。resourceはOrderテーブルのreceiptを読み取る操作で機密性をhighと判断。
-Actionとしての認可(authorization)が実装されておらず、実装品質はmissing。policy_violationとしてIDORを検出しました。
+Code inspection completed. The principal is the order_id obtained from HTTP requests (untrusted), while session user_id is evaluated as semi-trusted.
+The order_receipt function retrieves orders via Order.query.get(order_id) without authorization checks, allowing access to any order_id. The resource operation (reading Order table receipts) was assessed as high confidentiality.
+Authorization as an action is not implemented (missing). This policy violation was identified as an IDOR vulnerability.
 

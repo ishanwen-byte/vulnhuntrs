@@ -208,7 +208,7 @@ async fn main() -> Result<()> {
     );
     progress_bar.set_message("Analyzing files...");
 
-    // 並列度を制御してタスクを実行 - パターンごとに分析
+    // Control parallelism to execute tasks - analyze by pattern
     let results = stream::iter(all_pattern_matches.iter().enumerate())
         .map(|(idx, (file_path, pattern_match))| {
             let file_path = file_path.clone();
@@ -333,7 +333,7 @@ async fn main() -> Result<()> {
                 Some((file_path, analysis_result))
             }
         })
-        .buffer_unordered(50) // パターンベース分析での並列処理強化
+        .buffer_unordered(50) // Enhanced parallel processing for pattern-based analysis
         .collect::<Vec<_>>()
         .await;
     for result in results.into_iter() {

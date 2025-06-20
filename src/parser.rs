@@ -52,7 +52,7 @@ impl CodeParser {
     pub fn add_file(&mut self, path: &Path) -> Result<()> {
         let content = fs::read_to_string(path).map_err(|e| {
             anyhow!(
-                "ファイルの読み込みに失敗しました: {}: {}",
+                "Failed to read file: {}: {}",
                 path.display(),
                 e
             )
@@ -110,73 +110,73 @@ impl CodeParser {
         } else if language == &unsafe { tree_sitter_php() } {
             "php"
         } else {
-            return Err(anyhow!("クエリに対応していない言語です"));
+            return Err(anyhow!("Unsupported language for query"));
         };
 
         if lang_name.contains('/') || lang_name.contains('\\') || lang_name.contains("..") {
-            return Err(anyhow!("クエリパスの言語名が不正です: {}", lang_name));
+            return Err(anyhow!("Invalid language name in query path: {}", lang_name));
         }
         if query_name.contains('/') || query_name.contains('\\') || query_name.contains("..") {
-            return Err(anyhow!("クエリパスのクエリ名が不正です: {}", query_name));
+            return Err(anyhow!("Invalid query name in query path: {}", query_name));
         }
 
         let query_content = match lang_name {
             "c" => match query_name {
                 "definitions" => include_str!("queries/c/definitions.scm"),
                 "references" => include_str!("queries/c/references.scm"),
-                _ => return Err(anyhow!("未対応のクエリ名: {}", query_name)),
+                _ => return Err(anyhow!("Unsupported query name: {}", query_name)),
             },
             "cpp" => match query_name {
                 "definitions" => include_str!("queries/cpp/definitions.scm"),
                 "references" => include_str!("queries/cpp/references.scm"),
-                _ => return Err(anyhow!("未対応のクエリ名: {}", query_name)),
+                _ => return Err(anyhow!("Unsupported query name: {}", query_name)),
             },
             "python" => match query_name {
                 "definitions" => include_str!("queries/python/definitions.scm"),
                 "references" => include_str!("queries/python/references.scm"),
-                _ => return Err(anyhow!("未対応のクエリ名: {}", query_name)),
+                _ => return Err(anyhow!("Unsupported query name: {}", query_name)),
             },
             "javascript" => match query_name {
                 "definitions" => include_str!("queries/javascript/definitions.scm"),
                 "references" => include_str!("queries/javascript/references.scm"),
-                _ => return Err(anyhow!("未対応のクエリ名: {}", query_name)),
+                _ => return Err(anyhow!("Unsupported query name: {}", query_name)),
             },
             "typescript" => match query_name {
                 "definitions" => include_str!("queries/typescript/definitions.scm"),
                 "references" => include_str!("queries/typescript/references.scm"),
-                _ => return Err(anyhow!("未対応のクエリ名: {}", query_name)),
+                _ => return Err(anyhow!("Unsupported query name: {}", query_name)),
             },
             "java" => match query_name {
                 "definitions" => include_str!("queries/java/definitions.scm"),
                 "references" => include_str!("queries/java/references.scm"),
-                _ => return Err(anyhow!("未対応のクエリ名: {}", query_name)),
+                _ => return Err(anyhow!("Unsupported query name: {}", query_name)),
             },
             "go" => match query_name {
                 "definitions" => include_str!("queries/go/definitions.scm"),
                 "references" => include_str!("queries/go/references.scm"),
-                _ => return Err(anyhow!("未対応のクエリ名: {}", query_name)),
+                _ => return Err(anyhow!("Unsupported query name: {}", query_name)),
             },
             "rust" => match query_name {
                 "definitions" => include_str!("queries/rust/definitions.scm"),
                 "references" => include_str!("queries/rust/references.scm"),
-                _ => return Err(anyhow!("未対応のクエリ名: {}", query_name)),
+                _ => return Err(anyhow!("Unsupported query name: {}", query_name)),
             },
             "ruby" => match query_name {
                 "definitions" => include_str!("queries/ruby/definitions.scm"),
                 "references" => include_str!("queries/ruby/references.scm"),
-                _ => return Err(anyhow!("未対応のクエリ名: {}", query_name)),
+                _ => return Err(anyhow!("Unsupported query name: {}", query_name)),
             },
             "terraform" => match query_name {
                 "definitions" => include_str!("queries/terraform/definitions.scm"),
                 "references" => include_str!("queries/terraform/references.scm"),
-                _ => return Err(anyhow!("未対応のクエリ名: {}", query_name)),
+                _ => return Err(anyhow!("Unsupported query name: {}", query_name)),
             },
             "php" => match query_name {
                 "definitions" => include_str!("queries/php/definitions.scm"),
                 "references" => include_str!("queries/php/references.scm"),
-                _ => return Err(anyhow!("未対応のクエリ名: {}", query_name)),
+                _ => return Err(anyhow!("Unsupported query name: {}", query_name)),
             },
-            _ => return Err(anyhow!("未対応の言語: {}", lang_name)),
+            _ => return Err(anyhow!("Unsupported language: {}", lang_name)),
         };
 
         Ok(query_content)
@@ -189,7 +189,7 @@ impl CodeParser {
     ) -> Result<Option<(PathBuf, Definition)>> {
         let content = self.files.get(source_file).ok_or_else(|| {
             anyhow!(
-                "パーサーにファイルが見つかりません: {}",
+                "Parser does not have the file: {}",
                 source_file.display()
             )
         })?;
@@ -201,17 +201,17 @@ impl CodeParser {
 
         self.parser
             .set_language(&language)
-            .map_err(|e| anyhow!("言語の設定に失敗しました: {}", e))?;
+            .map_err(|e| anyhow!("Failed to set language: {}", e))?;
 
         let tree = self
             .parser
             .parse(content, None)
-            .ok_or_else(|| anyhow!("ファイルのパースに失敗しました: {}", source_file.display()))?;
+            .ok_or_else(|| anyhow!("Failed to parse file: {}", source_file.display()))?;
 
         let query_str = self.get_query_content(&language, "definitions")?;
 
         let query = Query::new(&language, &query_str)
-            .map_err(|e| anyhow!("クエリの生成に失敗しました: {}", e))?;
+            .map_err(|e| anyhow!("Failed to generate query: {}", e))?;
 
         let mut query_cursor = QueryCursor::new();
         let mut matches = query_cursor.matches(&query, tree.root_node(), content.as_bytes());
@@ -277,7 +277,7 @@ impl CodeParser {
                 Ok(s) => s,
                 Err(e) => {
                     eprintln!(
-                        "警告: 参照クエリの取得に失敗しました: {}: {}",
+                        "Warning: Failed to get reference query: {}: {}",
                         file_path.display(),
                         e
                     );
@@ -288,7 +288,7 @@ impl CodeParser {
             let query = match Query::new(&language, &query_str) {
                 Ok(q) => q,
                 Err(e) => {
-                    eprintln!("警告: 参照クエリの生成に失敗しました: {}", e);
+                    eprintln!("Warning: Failed to generate reference query: {}", e);
                     continue;
                 }
             };
@@ -358,7 +358,7 @@ impl CodeParser {
         let file_content = self
             .files
             .get(start_path)
-            .ok_or_else(|| anyhow::anyhow!("ファイルが見つかりません: {}", start_path.display()))?;
+            .ok_or_else(|| anyhow::anyhow!("File not found: {}", start_path.display()))?;
 
         // If the language is not supported by tree-sitter (e.g., Terraform, YAML, JSON),
         // return an empty context instead of failing
@@ -374,11 +374,11 @@ impl CodeParser {
         };
         self.parser
             .set_language(&language)
-            .map_err(|e| anyhow::anyhow!("言語の設定に失敗: {}", e))?;
+            .map_err(|e| anyhow::anyhow!("Failed to configure language: {}", e))?;
         let tree = self
             .parser
             .parse(file_content, None)
-            .ok_or_else(|| anyhow::anyhow!("パース失敗: {}", start_path.display()))?;
+            .ok_or_else(|| anyhow::anyhow!("Parsing failed: {}", start_path.display()))?;
 
         // Extract definitions
         let definitions_query_str = self.get_query_content(&language, "definitions")?;
@@ -452,7 +452,7 @@ impl CodeParser {
 
         while let Some((file_path, func_name)) = to_visit.pop() {
             if let Some((_, def)) = self.find_definition(&func_name, &file_path)? {
-                // referencesクエリで呼び出し先を抽出
+                // Extract call targets using references query
                 let refs = self.find_references(&def.name)?;
                 for (ref_file, ref_def) in refs {
                     if !collected.contains(&ref_def.name) {

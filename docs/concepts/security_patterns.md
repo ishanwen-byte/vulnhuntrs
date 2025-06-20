@@ -1,87 +1,87 @@
-# security pattern
+# Security Patterns
 
-Parsentryが使用するpatternベースの脆弱性検函systemの概念について説明します。
+This document explains the concept of pattern-based vulnerability detection system used by Parsentry.
 
-## 概要
+## Overview
 
-security patternは、LLM解析の前段階で潜在的な脆弱性を効率的にfilteringする正規表現ベースのruleです。複数のprogramming言語に対応し、data flow解析と組み合わせて使用されます。
+Security patterns are regex-based rules that efficiently filter potential vulnerabilities before LLM analysis. They support multiple programming languages and are used in combination with data flow analysis.
 
-## PAR（Principal-Action-Resource）分類
+## PAR (Principal-Action-Resource) Classification
 
 ### Principal
-認証主体や信頼できるdataソースを識別します。
+Identifies authentication entities and trusted data sources.
 
-**programming言語における例**:
-- **Web framework**: HTTP requestハンドラー、form data処理
-- **file system**: file読み取り、設定file解析
-- **network**: API応答、外部service呼び出し
-- **環境**: 環境変数、commandライン引数、database結果
+**Examples in programming languages**:
+- **Web framework**: HTTP request handlers, form data processing
+- **File system**: File reading, configuration file parsing
+- **Network**: API responses, external service calls
+- **Environment**: Environment variables, command line arguments, database results
 
-**IaCにおける例**:
-- **AWS IAM**: ユーザー、ロール、アカウント
-- **アクセス権限**: ポリシーアタッチメント
+**Examples in IaC**:
+- **AWS IAM**: Users, roles, accounts
+- **Access permissions**: Policy attachments
 
 ### Action
-data処理、検証、security制御を表す操作を識別します。
+Identifies operations representing data processing, validation, and security controls.
 
-**programming言語における例**:
-- **data検証**: schema検証、型check、正規表現検証
-- **data sanitization**: HTMLエスケープ、path正規化
-- **security制御**: hash化、暗号化、token検証
+**Examples in programming languages**:
+- **Data validation**: Schema validation, type checking, regex validation
+- **Data sanitization**: HTML escaping, path normalization
+- **Security controls**: Hashing, encryption, token validation
 
-**IaCにおける例**:
-- **AWS API操作**: s3:GetObject、ec2:DescribeInstances
-- **権限変更**: IAMポリシー更新
+**Examples in IaC**:
+- **AWS API operations**: s3:GetObject, ec2:DescribeInstances
+- **Permission changes**: IAM policy updates
 
 ### Resource
-dataの最終的な出力先や危険な操作対象を識別します。
+Identifies final data destinations or dangerous operation targets.
 
-**programming言語における例**:
-- **code実行**: `eval()`、`exec()`、動的code実行
-- **command実行**: shell実行、process生成
-- **database**: SQL query実行、NoSQL操作
-- **file system**: file書き込み、path traversal
-- **network**: 外部HTTP request、URL構築
+**Examples in programming languages**:
+- **Code execution**: `eval()`, `exec()`, dynamic code execution
+- **Command execution**: Shell execution, process spawning
+- **Database**: SQL query execution, NoSQL operations
+- **File system**: File writing, path traversal
+- **Network**: External HTTP requests, URL construction
 
-**IaCにおける例**:
-- **AWS サービス**: S3バケット、EC2インスタンス、Lambda関数
-- **ネットワークリソース**: VPC、サブネット、セキュリティグループ
+**Examples in IaC**:
+- **AWS services**: S3 buckets, EC2 instances, Lambda functions
+- **Network resources**: VPCs, subnets, security groups
 
-## データフロー解析との統合
+## Integration with Data Flow Analysis
 
-パターンマッチングの結果に基づいて、適切なコンテキスト抽出を行います：
+Based on pattern matching results, appropriate context extraction is performed:
 
-- **Principalマッチ**: `find_references()`を使用してデータの流れを前方追跡
-- **Actionマッチ**: `find_bidirectional()`を使用してデータ処理の前後両方向を追跡
-- **Resourceマッチ**: `find_definition()`を使用してデータの起源を後方追跡
-- **攻撃ベクター**: MITRE ATT&CKフレームワークのタクティクスIDで脅威を分類
+- **Principal match**: Forward tracking of data flow using `find_references()`
+- **Action match**: Bidirectional tracking of data processing using `find_bidirectional()`
+- **Resource match**: Backward tracking of data origins using `find_definition()`
+- **Attack vectors**: Threat classification using MITRE ATT&CK framework tactic IDs
 
-## リスクスコアリング
+## Risk Scoring
 
-各パターンには1-10のリスクスコアが付与されます：
+Each pattern is assigned a risk score from 1-10:
 
-- **1-3**: 低リスク（情報提供）
-- **4-6**: 中リスク（コンテキスト依存）
-- **7-9**: 高リスク（脆弱性の可能性が高い）
-- **10**: クリティカル（ほぼ確実に脆弱）
+- **1-3**: Low risk (informational)
+- **4-6**: Medium risk (context-dependent)
+- **7-9**: High risk (likely vulnerable)
+- **10**: Critical (almost certainly vulnerable)
 
-## 解析パイプラインでの役割
+## Role in Analysis Pipeline
 
-1. **ファイルフィルタリング**: 閾値以下のファイルをスキップ
-2. **優先度付け**: 高リスクファイルを優先的にLLM解析
-3. **コンテキスト強化**: マッチした領域をLLMに提供
-4. **脆弱性タイプのヒント**: パターンカテゴリに基づく分類
+1. **File filtering**: Skip files below threshold
+2. **Prioritization**: Prioritize high-risk files for LLM analysis
+3. **Context enhancement**: Provide matched areas to LLM
+4. **Vulnerability type hints**: Classification based on pattern categories
 
-## パフォーマンス最適化
+## Performance Optimization
 
-- **コンパイル時最適化**: 起動時にパターンをコンパイル
-- **並列処理**: 複数ファイルの同時解析
-- **早期終了**: 高信頼度マッチで処理を停止
-- **キャッシュ**: コンパイル済みパターンの再利用
+- **Compile-time optimization**: Compile patterns at startup
+- **Parallel processing**: Concurrent analysis of multiple files
+- **Early termination**: Stop processing on high-confidence matches
+- **Caching**: Reuse compiled patterns
 
-## 設定とカスタマイゼーション
+## Configuration and Customization
 
-パターンは`src/patterns/`ディレクトリで言語別に管理され、以下の構造で定義されます：
+Patterns are managed by language in the `src/patterns/` directory with the following structure:
 
 ```yaml
 # 例: src/patterns/python.yml
@@ -113,8 +113,8 @@ resources:
 - `c.yml`, `cpp.yml`
 - `terraform.yml`, `kubernetes.yml`
 
-## 将来の拡張
+## Future Extensions
 
-- **セマンティック解析**: ASTベースのパターンマッチング
-- **機械学習統合**: プロジェクト固有パターンの学習
-- **インタラクティブチューニング**: ユーザーフィードバックによる改善
+- **Semantic analysis**: AST-based pattern matching
+- **Machine learning integration**: Learning project-specific patterns
+- **Interactive tuning**: Improvement through user feedback

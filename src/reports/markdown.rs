@@ -19,28 +19,28 @@ pub fn to_markdown(response: &Response) -> String {
 
     // File information section
     if let Some(file_path) = &response.file_path {
-        md.push_str("## ファイル情報\n\n");
-        md.push_str(&format!("- **ファイルパス**: `{}`\n", file_path));
+        md.push_str("## File Information\n\n");
+        md.push_str(&format!("- **File Path**: `{}`\n", file_path));
         if let Some(pattern) = &response.pattern_description {
-            md.push_str(&format!("- **検出パターン**: {}\n", pattern));
+            md.push_str(&format!("- **Detected Pattern**: {}\n", pattern));
         }
         md.push_str("\n");
     }
 
     let confidence_badge = match response.confidence_score {
-        90..=100 => "![高信頼度](https://img.shields.io/badge/信頼度-高-red)",
-        70..=89 => "![中高信頼度](https://img.shields.io/badge/信頼度-中高-orange)",
-        50..=69 => "![中信頼度](https://img.shields.io/badge/信頼度-中-yellow)",
-        30..=49 => "![中低信頼度](https://img.shields.io/badge/信頼度-中低-green)",
-        _ => "![低信頼度](https://img.shields.io/badge/信頼度-低-blue)",
+        90..=100 => "![High Confidence](https://img.shields.io/badge/Confidence-High-red)",
+        70..=89 => "![Medium-High Confidence](https://img.shields.io/badge/Confidence-Medium_High-orange)",
+        50..=69 => "![Medium Confidence](https://img.shields.io/badge/Confidence-Medium-yellow)",
+        30..=49 => "![Medium-Low Confidence](https://img.shields.io/badge/Confidence-Medium_Low-green)",
+        _ => "![Low Confidence](https://img.shields.io/badge/Confidence-Low-blue)",
     };
     md.push_str(&format!(
-        "{} **信頼度スコア: {}**\n\n",
+        "{} **Confidence Score: {}**\n\n",
         confidence_badge, response.confidence_score
     ));
 
     if !response.vulnerability_types.is_empty() {
-        md.push_str("## 脆弱性タイプ\n\n");
+        md.push_str("## Vulnerability Types\n\n");
         for vuln_type in &response.vulnerability_types {
             md.push_str(&format!("- `{:?}`\n", vuln_type));
         }
@@ -66,7 +66,7 @@ pub fn to_markdown(response: &Response) -> String {
     }
 
     if !response.par_analysis.actions.is_empty() {
-        md.push_str("### Actions (セキュリティ制御)\n\n");
+        md.push_str("### Actions \n");
         for action in &response.par_analysis.actions {
             md.push_str(&format!(
                 "- **{}**: {:?}\n",
@@ -120,26 +120,26 @@ pub fn to_markdown(response: &Response) -> String {
     // Source code sections
     if let Some(matched_code) = &response.matched_source_code {
         if !matched_code.trim().is_empty() {
-            md.push_str("## マッチしたソースコード\n\n");
+            md.push_str("## Matched Source Code\n\n");
             md.push_str("```code\n");
             md.push_str(matched_code);
             md.push_str("\n```\n\n");
         }
     }
 
-    md.push_str("## 詳細解析\n\n");
+    md.push_str("## Detailed Analysis\n\n");
     md.push_str(&response.analysis);
     md.push_str("\n\n");
 
     if !response.poc.is_empty() {
-        md.push_str("## PoC（概念実証コード）\n\n");
+        md.push_str("## Proof of Concept\n\n");
         md.push_str("```text\n");
         md.push_str(&response.poc);
         md.push_str("\n```\n\n");
     }
 
     if !response.remediation_guidance.policy_enforcement.is_empty() {
-        md.push_str("## 修復ガイダンス\n\n");
+        md.push_str("## Remediation Guidance\n\n");
         for remediation in &response.remediation_guidance.policy_enforcement {
             md.push_str(&format!("### {}\n\n", remediation.component));
             md.push_str(&format!(
@@ -155,7 +155,7 @@ pub fn to_markdown(response: &Response) -> String {
     }
 
     if !response.scratchpad.is_empty() {
-        md.push_str("## 解析ノート\n\n");
+        md.push_str("## Analysis Notes\n\n");
         md.push_str(&response.scratchpad);
         md.push_str("\n\n");
     }

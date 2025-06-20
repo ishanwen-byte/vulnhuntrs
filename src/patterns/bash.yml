@@ -19,6 +19,9 @@ principals:
     description: "User input via read command"
     attack_vector:
       - "T1059"  # Command and Scripting Interpreter
+      - "T1190"  # Exploit Public-Facing Application
+      - "T1053"  # Scheduled Task
+      - "T1072"  # Software Deployment Tools
       - "T1055"  # Process Injection
 
   # External data sources

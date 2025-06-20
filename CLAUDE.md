@@ -98,5 +98,5 @@ Benchmark validation uses `benchmarks/XBEN-XXX-24/benchmark.json`
 
 ## Behavior guideline
 
-top levelのディレクトリに新たなファイルやディレクトリを作成しないでください、gitのバージョン管理を利用してください
-ユーザーとは必ずsayコマンドを使って結果を要約して応答してください
+Do not create new files or directories in the top level directory, please use git for version control
+Always use the say command to summarize and respond to the user

@@ -67,9 +67,9 @@ impl AnalysisSummary {
         let mut md = String::new();
         md.push_str("# PAR Security Analysis Summary Report\n\n");
 
-        md.push_str("## 概要\n\n");
-        md.push_str("| ファイル | 脆弱性タイプ | 信頼度 | Policy Violations |\n");
-        md.push_str("|---------|------------|--------|------------------|\n");
+        md.push_str("## Summary\n\n");
+        md.push_str("| File | Vulnerability Type | Confidence | Policy Violations |\n");
+        md.push_str("|------|-------------------|------------|------------------|\n");
 
         for result in &self.results {
             if result.response.confidence_score > 0 {
@@ -129,8 +129,8 @@ impl AnalysisSummary {
             }
         }
 
-        md.push_str("| Rule ID | 件数 | 説明 |\n");
-        md.push_str("|---------|------|------|\n");
+        md.push_str("| Rule ID | Count | Description |\n");
+        md.push_str("|---------|-------|-------------|\n");
 
         for (rule_id, count) in violation_count.iter() {
             // Find the first occurrence to get the description

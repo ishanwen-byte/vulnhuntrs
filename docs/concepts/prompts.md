@@ -1,32 +1,32 @@
-# LLM prompt文書
+# LLM Prompt Documentation
 
-本文書では、Parsentryが正確なsecurity解析を実行するためにLLMを誘導するために使用するprompt engineeringアプローチについて説明します。
+This document describes the prompt engineering approach used by Parsentry to guide LLMs in performing accurate security analysis.
 
-## promptアーキテクチャ
+## Prompt Architecture
 
-Parsentryは以下を目的とした多層prompt systemを使用します：
-1. security解析contextを確立
-2. 体系的脆弱性発見を誘導
-3. 一貫性のある実用的な出力を保証
-4. 脆弱性固有の深堀りを可能にする
+Parsentry uses a multi-layered prompt system designed to:
+1. Establish security analysis context
+2. Guide systematic vulnerability discovery
+3. Ensure consistent and actionable output
+4. Enable vulnerability-specific deep dives
 
-## core prompt
+## Core Prompts
 
-### 1. system prompt
+### 1. System Prompt
 
-**目的**: LLMの役割をsecurity研究者として確立し、出力要件を定義
+**Purpose**: Establish the LLM's role as a security researcher and define output requirements
 
-**主要コンポーネント**:
-- 役割定義: "あなたは専門のsecurity研究者です"
-- 焦点領域:
-  - 入力検証とsanitization
-  - 認証と認可
-  - data処理と保存
-  - network操作
-  - command実行
-  - file操作
-- 厳密なJSON出力schema強制
-- 悪用可能な脆弱性のみに重点
+**Key Components**:
+- Role definition: "You are a professional security researcher"
+- Focus areas:
+  - Input validation and sanitization
+  - Authentication and authorization
+  - Data processing and storage
+  - Network operations
+  - Command execution
+  - File operations
+- Strict JSON output schema enforcement
+- Focus only on exploitable vulnerabilities
 
 **Output Schema**:
 ```json
@@ -47,156 +47,233 @@ Parsentryは以下を目的とした多層prompt systemを使用します：
 }
 ```
 
-### 2. システムプロンプト（実装済み）
+### 2. System Prompt (Implemented)
 
-**実際のシステムプロンプト**:
+**Actual System Prompt**:
 ```
 You are a security vulnerability analyzer. You must reply with exactly one JSON object that matches this schema: { "scratchpad": string, "analysis": string, "poc": string, "confidence_score": integer, "vulnerability_types": array of strings, "context_code": array of objects with { "name": string, "reason": string, "code_line": string } }. Do not include any explanatory text outside the JSON object.
 ```
 
-**日本語ガイドライン**:
-- セキュリティ研究者として、コードの脆弱性を分析
-- 入力値の検証とサニタイズに注目
-- 認証・認可の確認
-- データの取り扱いと漏洩
-- コマンドインジェクションの可能性
-- パストラバーサルの脆弱性
+**Guidelines**:
+- Analyze code vulnerabilities as a security researcher
+- Focus on input validation and sanitization
+- Verify authentication and authorization
+- Check for data handling and leaks
+- Identify command injection possibilities
+- Detect path traversal vulnerabilities
 
-### 3. 初期解析プロンプト
+### 3. Initial Analysis Prompt
 
-**目的**: 提供されたコードの幅広いセキュリティスイープを実行
+**Purpose**: Perform broad security sweep of provided code
 
-**解析領域**:
-- **入力処理**: ユーザー入力、フォームデータ、APIパラメータ
-- **認証**: セッション管理、トークン検証
-- **ファイル操作**: パストラバーサル、ファイルインクルージョンリスク
-- **データベースクエリ**: SQLインジェクション脆弱性
-- **コマンド実行**: OSコマンドインジェクション
-- **ネットワーク操作**: SSRF、リクエスト偽造
+**Analysis Areas**:
+- **Input processing**: User input, form data, API parameters
+- **Authentication**: Session management, token validation
+- **File operations**: Path traversal, file inclusion risks
+- **Database queries**: SQL injection vulnerabilities
+- **Command execution**: OS command injection
+- **Network operations**: SSRF, request forgery
 
-**コンテキスト統合**:
-- プロジェクトサマリーを含む
-- 対象ファイルの完全なソースコード
-- ファイルパスとプロジェクト構造ヒント
+**Context Integration**:
+- Include project summary
+- Full source code of target files
+- File paths and project structure hints
 
-### 4. 脆弱性固有プロンプト（実装済み）
+### 4. Vulnerability-Specific Prompts (Implemented)
 
-各脆弱性タイプに対して専用のバイパス技術が定義済み：
+Each vulnerability type has dedicated bypass techniques defined:
 
-#### ローカルファイルインクルージョン (LFI)
+#### Local File Inclusion (LFI)
 - Path traversal sequences(../../)
 - URL encoding
 - Null byte injection
 
-#### リモートコード実行 (RCE) 
+#### Remote Code Execution (RCE)
 - Shell metacharacters for command injection
 - Python execution vectors
 - Deserialization attacks
 
-#### SQLインジェクション (SQLI)
+#### SQL Injection (SQLI)
 - UNION-based injection
 - Boolean-based blind injection
 - Time-based blind injection
 
-#### クロスサイトスクリプティング (XSS)
+#### Cross-Site Scripting (XSS)
 - HTML entity encoding bypass
 - JavaScript template injection
 - DOM-based XSS vectors
 
-#### サーバーサイドリクエストフォージェリ (SSRF)
+#### Server-Side Request Forgery (SSRF)
 - DNS rebinding
 - IP address encoding tricks
 - Redirect chain
 
-#### 任意ファイル操作 (AFO)
+#### Arbitrary File Operations (AFO)
 - Directory traversal sequences
 - Following symbolic links
 - Race conditions
 
-#### 安全でない直接オブジェクト参照 (IDOR)
+#### Insecure Direct Object Reference (IDOR)
 - Parameter tampering
 - Horizontal privilege escalation
 - Predictable resource paths
 
-### 5. 解析ガイドライン
+### 5. Analysis Guidelines
 
-**方法論指示**:
-1. **データフロートレース**: ユーザー入力をエントリから処理まで追跡
-2. **信頼境界解析**: 検証が発生する場所を識別
-3. **影響評価**: 悪用可能性と重要度を決定
-4. **バイパス考慮**: 攻撃者のように考える
-5. **信頼度評価**: コードの明確性と悪用可能性に基づく
+**Methodology Instructions**:
+1. **Data flow tracing**: Track user input from entry to processing
+2. **Trust boundary analysis**: Identify where validation occurs
+3. **Impact assessment**: Determine exploitability and severity
+4. **Bypass consideration**: Think like an attacker
+5. **Confidence rating**: Based on code clarity and exploitability
 
-**品質基準**:
-- 悪用可能な脆弱性のみレポート
-- 具体的なコード参照を提供
-- 動作する概念実証を含める
-- 攻撃シナリオを明確に説明
-- 実用的な修復策を提案
+**Quality Standards**:
+- Report only exploitable vulnerabilities
+- Provide specific code references
+- Include working proof of concept
+- Clearly explain attack scenarios
+- Suggest practical remediation
 
-### 6. 評価プロンプト
+### 6. Evaluation Prompt
 
-**目的**: テストシナリオで解析品質を評価
+**Purpose**: Rank multiple vulnerability candidates and determine priority
 
-**評価メトリクス**:
-- 真陽性率
-- 偽陽性率
-- PoC有効性
-- 解析完全性
-- 修復品質
+**Evaluation Criteria**:
+1. **Exploitability**: Attack difficulty
+2. **Impact**: Potential system damage
+3. **Confidence**: Analysis certainty
+4. **Prevalence**: Common occurrence rate
+5. **Detectability**: Static analysis tool detection likelihood
 
-## プロンプトエンジニアリングベストプラクティス
-
-### 1. 明確性と具体性
-- 正確な技術用語を使用
-- 明確な例を提供
-- 正確な出力形式を定義
-- 曖昧な指示を回避
-
-### 2. コンテキスト管理
-- 関連するコードコンテキストを含める
-- プロジェクトレベルの理解を提供
-- セキュリティに焦点を維持
-- 詳細と簡潔性のバランス
-
-### 3. 出力の一貫性
-- 構造化形式を強制
-- スキーマ検証を使用
-- 特定のフィールドを要求
-- 信頼度スコアリングを標準化
-
-### 4. 反復的改善
-- 既知の脆弱性でプロンプトをテスト
-- 偽陽性率に基づいて調整
-- 新しい攻撃パターンを組み込み
-- 新興脅威に対して更新
-
-## 高度な技術
-
-### 思考連鎖プロンプティング
-"scratchpad"フィールドは段階的推論を促進:
-```
-1. 入力ソースを識別
-2. データフローを追跡
-3. 検証ギャップを発見
-4. 悪用を構築
-5. 悪用可能性を検証
+**Output Format**:
+```json
+{
+  "vulnerability": "XSS",
+  "exploitability": 8,
+  "impact": 7,
+  "confidence": 9,
+  "prevalence": 9,
+  "detectability": 6,
+  "priority": "High"
+}
 ```
 
-### フューショット例
-プロンプトで脆弱性例を提供:
-```python
-# 脆弱:
+## Prompt Engineering Best Practices
+
+1. **Clear Role Definition**:
+   - Specify exact expertise
+   - Define expected behaviors
+
+2. **Structured Output**:
+   - Enforce JSON schema
+   - Prevent deviations
+
+3. **Progressive Complexity**:
+   - Start with general scan
+   - Focus on specific vulnerabilities
+
+4. **Context Integration**:
+   - Include relevant code
+   - Provide project structure
+
+5. **Quality Control**:
+   - Minimize false positives
+   - Focus on exploitability
+
+6. **Iterative Improvement**:
+   - Learn from false positives
+   - Incorporate new attack patterns
+
+## Advanced Techniques
+
+1. **Multi-Layer Analysis**:
+   - Analyze at different abstraction levels
+   - Combine code flow and semantics
+
+2. **Context Expansion**:
+   - Include relevant dependencies
+   - Consider project-wide security context
+
+3. **Meta-Prompting**:
+   - Prompts that optimize other prompts
+   - Based on analysis quality metrics
+
+4. **Ensemble Prompting**:
+   - Combine multiple expert roles
+   - Analyze vulnerabilities from different perspectives
+
+5. **Adaptive Prompting**:
+   - Adjust prompts based on code context
+   - Include language/framework-specific hints
+
+### Chain-of-Thought Prompting
+"scratchpad" field facilitates step-by-step reasoning:
+```
+1. Identify input sources
+2. Trace data flow
+3. Discover validation gaps
+4. Construct exploit
+5. Verify exploitability
+```
+
+### Few-Shot Examples
+Provide vulnerability examples in prompts:
+```
+# Vulnerable:
 query = f"SELECT * FROM users WHERE id = {user_input}"
 
-# 悪用:
+# Exploit:
 user_input = "1 OR 1=1--"
 ```
 
-### ネガティブ例
-報告すべきでないものを明確化:
+### Negative Examples
+Clarify what not to report:
 ```
-- PoCなしの理論的脆弱性
-- 特権アクセスが必要な問題
-- セキュリティ影響のないベストプラクティス違反
+- Theoretical vulnerabilities without PoC
+- Issues requiring privileged access
+- Best practice violations without security impact
 ```
+
+## Implementation Examples
+
+### Python Web Application Analysis
+```python
+# System Prompt
+expert_role = "Python Web Security Specialist"
+focus_areas = ["SQL Injection", "XSS", "Authentication Bypass"]
+
+# Initial Analysis Prompt
+analyze_code("""
+@app.route('/search')
+def search():
+    query = request.args.get('q')
+    cursor.execute(f"SELECT * FROM products WHERE name LIKE '%{query}%'")
+    return render_template('results.html', results=cursor.fetchall())
+""")
+```
+
+### Node.js Authentication Analysis
+```javascript
+// Vulnerability-Specific Prompt
+detect_vulnerability({
+  code: """
+  app.post('/login', (req, res) => {
+    const user = users.find(u => u.email === req.body.email);
+    if(user && user.password === req.body.password) {
+      req.session.userId = user.id;
+    }
+  });
+  """,
+  vulnerability_types: ["Authentication", "Session Management"]
+});
+```
+
+## Conclusion
+
+Parsentry's prompt design features:
+- **Hierarchical**: System → Initial → Specific
+- **Context-aware**: Integrates code and project structure
+- **Structured**: Strict JSON output
+- **Iterative**: Continuous improvement
+
+This approach enables deeper, context-aware vulnerability detection compared to traditional static analysis tools.

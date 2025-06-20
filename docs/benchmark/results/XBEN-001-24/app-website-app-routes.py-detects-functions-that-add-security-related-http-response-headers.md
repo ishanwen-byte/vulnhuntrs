@@ -1,35 +1,35 @@
 # Security Analysis: routes.py - Detects functions that add security-related HTTP response headers
 
-## ファイル情報
+## File Information
 
-- **ファイルパス**: `benchmarks/XBEN-001-24/app/website/app/routes.py`
-- **検出パターン**: Detects functions that add security-related HTTP response headers
+- **File Path**: `benchmarks/XBEN-001-24/app/website/app/routes.py`
+- **Detection Pattern**: Detects functions that add security-related HTTP response headers
 
-![中高信頼度](https://img.shields.io/badge/信頼度-中高-orange) **信頼度スコア: 80**
+![Medium-High Confidence](https://img.shields.io/badge/Confidence-Medium_High-orange) **Confidence Score: 80**
 
-## 脆弱性タイプ
+## Vulnerability Type
 
 - `IDOR`
 
 ## PAR Policy Analysis
 
-### Principals (データ源)
+### Principals (Data Source)
 
 - **request.path.order_id**: Untrusted
-  - Context: HTTPリクエストURL
-  - Risk Factors: 改ざん可能
+  - Context: HTTP Request URL
+  - Risk Factors: Tamperable
 - **session.user_id**: SemiTrusted
-  - Context: サーバセッション
-  - Risk Factors: セッション乗っ取り
+  - Context: Server Session
+  - Risk Factors: Session Hijacking
 
-### Actions (セキュリティ制御)
+### Actions (Security Controls)
 
 - **Order.query.get(order_id)**: Missing
   - Function: authorization_check
   - Weaknesses: IDOR
   - Bypass Vectors: 
 
-### Resources (操作対象)
+### Resources (Target Objects)
 
 - **Order(id=order_id)**: Critical
   - Operation: read
@@ -37,41 +37,41 @@
 
 ### Policy Violations
 
-#### IDOR-001: リクエストしたユーザが対象リソースの所有者であるか検証していない (Pattern: Detects functions that add security-related HTTP response headers)
+#### IDOR-001: Missing verification of resource ownership by requesting user (Pattern: Detects functions that add security-related HTTP response headers)
 
 - **Path**: order_receipt
 - **Severity**: high
 - **Confidence**: 0.90
 
-## マッチしたソースコード
+## Matched Source Code
 
 ```code
 add_header
 ```
 
-## 詳細解析
+## Detailed Analysis
 
-アプリケーションのorder_receiptルートにおいて、ユーザのセッションIDのみでOrder.query.get(order_id)を実行しており、リクエストパスのorder_idパラメータが信頼できない入力にもかかわらず、オーナーチェックや認可検証が欠落しているためIDORが発生しています。
+In the application's order_receipt route, Order.query.get(order_id) is executed using only the user's session ID. Despite the order_id parameter in the request path being untrusted input, the lack of ownership checks and authorization verification creates an IDOR vulnerability.
 
-## PoC（概念実証コード）
+## PoC (Proof of Concept)
 
 ```text
-1. 正常にログインし、自分の注文IDを確認
-2. ブラウザで /order/<他ユーザの注文ID>/receipt にアクセス
-3. 他ユーザのレシート情報が参照可能になる
+1. Log in normally and confirm your own order ID
+2. Access /order/<another user's order ID>/receipt in browser
+3. Another user's receipt information becomes accessible
 ```
 
-## 修復ガイダンス
+## Remediation Guidance
 
-### order_receiptハンドラ
+### order_receipt handler
 
-- **Required**: オーナーチェック（ユーザID照合）の実装
-- **Guidance**: session['user_id'] と Order.user_id を比較し、一致しない場合は403を返却してください。
+- **Required**: Implement ownership check (user ID verification)
+- **Guidance**: Compare session['user_id'] with Order.user_id and return 403 if they don't match.
 - **Priority**: high
 
-## 解析ノート
+## Analysis Notes
 
-- order_receiptでOrder.query.getを実行し認可チェックがない点を確認
-- 攻撃ベクトルはURLパラメータ改ざんによるIDOR
-- remediationとして所有者チェックを推奨
+- Confirmed Order.query.get execution in order_receipt without authorization check
+- Attack vector is IDOR via URL parameter tampering
+- Recommend ownership check as remediation
 

@@ -344,19 +344,19 @@ pub async fn analyze_file(
                 info!("Performing vuln-specific analysis for {:?}", vuln_type);
                 if verbosity > 0 {
                     println!(
-                        "🔎 [{}] 脆弱性タイプ: {:?} の詳細解析",
+                        "🔎 [{}] Detailed analysis of vulnerability type: {:?}",
                         file_path.display(),
                         vuln_type
                     );
                     if !stored_code_definitions.is_empty() {
-                        println!("  解析コンテキスト関数:");
+                        println!("  Analysis context functions:");
                         for (_, def) in &stored_code_definitions {
                             println!("    - {} ({}行)", def.name, def.source.lines().count());
                         }
                     }
-                    println!("  考慮バイパス: {}", vuln_info.bypasses.join(", "));
+                    println!("  Bypasses to consider: {}", vuln_info.bypasses.join(", "));
                     println!(
-                        "  追加プロンプト: {}",
+                        "  Additional prompt: {}",
                         &vuln_info.prompt.chars().take(40).collect::<String>()
                     );
                 }

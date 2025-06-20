@@ -58,7 +58,7 @@ pub fn validate_args(args: &Args) -> Result<()> {
     if let Some(output_dir) = &args.output_dir {
         if let Err(e) = crate::reports::validate_output_directory(output_dir) {
             eprintln!(
-                "❌ 出力ディレクトリのチェックに失敗: {}: {}",
+                "❌ Failed to validate output directory: {}: {}",
                 output_dir.display(),
                 e
             );

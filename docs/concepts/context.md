@@ -1,139 +1,141 @@
-# LLM解析用context構築
+# LLM Analysis Context Construction
 
-本文書では、Parsentryによる正確な脆弱性検出を実現するためのLLM context構築手法を説明します。
+This document describes the LLM context construction methodology for accurate vulnerability detection by Parsentry.
 
-## 概要
+## Overview
 
-正確な脆弱性検出には、個別codeセグメントの解析に加え、実行環境を含む包括的contextの理解が必要です。Parsentryは多層contextアーキテクチャによりLLMの解析精度を向上させます。
+Accurate vulnerability detection requires understanding not only individual code segments but also comprehensive context including the execution environment. Parsentry improves LLM analysis accuracy through a multi-layered context architecture.
 
-## context層
+## Context Layers
 
-### 1. プロジェクトレベルcontext
+### 1. Project-Level Context
 
-#### README解析
-- プロジェクトREADMEファイルを自動抽出・要約
-- 以下の理解を提供：
-  - プロジェクトの目的と機能
-  - 技術stackとdependency
-  - 開発者によって言及されたsecurity考慮事項
-  - API endpointとdata flow
+#### README Analysis
+- Automatically extracts and summarizes project README files
+- Provides understanding of:
+  - Project purpose and functionality
+  - Technology stack and dependencies
+  - Security considerations mentioned by developers
+  - API endpoints and data flow
 
-#### repository構造
-- プロジェクトdirectory構造をmapping
-- 以下を識別：
-  - entry point（mainファイル、API route）
-  - 設定ファイル
-  - test directory
-  - third-party dependency
+#### Repository Structure
+- Maps project directory structure
+- Identifies:
+  - Entry points (main files, API routes)
+  - Configuration files
+  - Test directories
+  - Third-party dependencies
 
-#### dependency解析
-- package manifest（package.json、Cargo.toml、requirements.txt等）を解析
-- 既知の脆弱なdependencyを識別
-- dependency使用patternをmapping
+#### Dependency Analysis
+- Analyzes package manifests (package.json, Cargo.toml, requirements.txt, etc.)
+- Identifies known vulnerable dependencies
+- Maps dependency usage patterns
 
-### 2. ファイルレベルコンテキスト
+### 2. File-Level Context
 
-#### ソースコード解析
-- 完全なファイル内容をLLMに提供
-- 以下を保持：
-  - 元のフォーマットとインデント
-  - コメントとドキュメント
-  - インポート文
-  - 関数/クラス構造
+#### Source Code Analysis
+- Provides complete file content to LLM
+- Preserves:
+  - Original formatting and indentation
+  - Comments and documentation
+  - Import statements
+  - Function/class structure
 
-#### セマンティック情報
-Tree-sitter解析を使用：
-- **関数定義**: 名前、パラメータ、戻り値型
-- **変数宣言**: スコープと使用パターン
-- **制御フロー**: 条件分岐、ループ、エラーハンドリング
-- **データフロー**: ユーザー入力がコード内で伝播する方法
+#### Semantic Information
+Using Tree-sitter analysis:
+- **Function definitions**: Names, parameters, return types
+- **Variable declarations**: Scope and usage patterns
+- **Control flow**: Conditional branches, loops, error handling
+- **Data flow**: How user input propagates through the code
 
-#### ファイルメタデータ
-- プロジェクト内の相対パス
-- ファイルタイプと言語
-- 最終変更時刻
-- ファイルサイズと複雑度メトリクス
+#### File Metadata
+- Relative path within project
+- File type and language
+- Last modified time
+- File size and complexity metrics
 
-### 3. コード関係コンテキスト
+### 3. Code Relationship Context
 
-#### インポート解析
-- インポートされたモジュールと関数を追跡
-- クロスファイル依存関係をマップ化
-- 外部ライブラリ使用を識別
+#### Import Analysis
+- Tracks imported modules and functions
+- Maps cross-file dependencies
+- Identifies external library usage
 
-#### 関数呼び出しグラフ
-- ファイル間の関数呼び出しを追跡
-- 以下を識別：
-  - ユーザー入力のエントリーポイント
-  - データ変換ポイント
-  - セキュリティ重要関数
+#### Function Call Graph
+- Tracks function calls across files
+- Identifies:
+  - User input entry points
+  - Data transformation points
+  - Security-critical functions
 
-#### データフロー追跡
-- 関数境界を越えた変数を追跡
-- 以下を追跡：
-  - ユーザー入力ソース
-  - データ変換
-  - 出力先
+#### Data Flow Tracking
+- Tracks variables across function boundaries
+- Tracks:
+  - User input sources
+  - Data transformations
+  - Output destinations
 
-## コンテキスト構築プロセス
+## Context Construction Process
 
-### 1. 初期スキャン
+### 1. Initial Scan
 ```
-リポジトリ → ファイル発見 → 言語検出 → パターンマッチング
-```
-
-### 2. 解析段階
-```
-ソースファイル → Tree-sitter AST → セマンティック抽出 → 関係マッピング
+Repository → File discovery → Language detection → Pattern matching
 ```
 
-### 3. コンテキスト組み立て
+### 2. Analysis Phase
 ```
-プロジェクト情報 + ファイル内容 + セマンティックデータ → 構造化コンテキスト
+Source files → Tree-sitter AST → Semantic extraction → Relationship mapping
 ```
 
-## コンテキスト最適化
+### 3. Context Assembly
+```
+Project information + File content + Semantic data → Structured context
+```
 
-### 関連性フィルタリング
-- セキュリティ関連コードセクションに焦点
-- 以下を優先：
-  - 入力処理関数
-  - データベースクエリ
-  - ファイル操作
-  - ネットワークリクエスト
-  - 認証/認可コード
+## Context Optimization
 
-### コンテキストウィンドウ管理
-- 大きなファイルを適切に切り詰め
-- 重要セクションを保持：
-  - 関数シグネチャ
-  - セキュリティ重要操作
-  - エラーハンドリング
-  - 入力検証
+### Relevance Filtering
+- Focuses on security-related code sections
+- Prioritizes:
+  - Input processing functions
+  - Database queries
+  - File operations
+  - Network requests
+  - Authentication/authorization code
 
-### クロスリファレンス強化
-- 他ファイルからの関連コードを含める
-- 呼び出される関数の定義を追加
-- 関連する設定値を含める
+### Context Window Management
+- Trims large files appropriately
+- Preserves critical sections:
+  - Function signatures
+  - Security-critical operations
+  - Error handling
+  - Input validation
 
-## 実装詳細
+### Cross-Reference Enhancement
+- Builds links between similar code patterns
+- Automatically associates:
+  - Same vulnerability patterns
+  - Similar functionality
+  - Common data flows
 
-### Tree-sitterクエリ
+## Implementation Examples
 
-関数定義と参照抽出のクエリ例：
+### Tree-sitter Queries
+
+Example queries for function definitions and references:
 ```scheme
-; 定義クエリ（definitions.scm）
+; Definition query (definitions.scm)
 (function_definition
   name: (identifier) @name
   body: (block)) @definition
 
-; 参照クエリ（references.scm）
+; Reference query (references.scm)
 (identifier) @reference
 ```
 
-現在サポートされる言語：C、C++、Python、JavaScript、TypeScript、Java、Go、Rust、Ruby
+Currently supported languages: C, C++, Python, JavaScript, TypeScript, Java, Go, Rust, Ruby
 
-### コンテキストテンプレート構造
+### Context Template Structure
 
 ```rust
 // Definition構造体
@@ -159,36 +161,36 @@ Code:
 function_body_source_code
 ```
 
-## ベストプラクティス
+## Best Practices
 
-### 1. 包括的カバレッジ
-- すべての関連コンテキスト層を含める
-- プロジェクト固有の事項についてLLMの知識を仮定しない
-- 明示的にセキュリティ関連情報を提供
+### 1. Comprehensive Coverage
+- Include all relevant context layers
+- Don't assume LLM knowledge about project-specific matters
+- Explicitly provide security-related information
 
-### 2. ノイズ削減
-- 無関係なコード（テスト、ドキュメント）をフィルタリング
-- 実行可能コードパスに焦点
-- ユーザー向け機能を優先
+### 2. Noise Reduction
+- Filter out irrelevant code (tests, documentation)
+- Focus on executable code paths
+- Prioritize user-facing functionality
 
-### 3. 関係の明確性
-- コード関係を明示的に記述
-- データフローパスを強調
-- 信頼境界をマーク
+### 3. Relationship Clarity
+- Explicitly describe code relationships
+- Highlight data flow paths
+- Mark trust boundaries
 
-## 将来の機能強化
+## Future Enhancements
 
-1. **動的解析統合**
-   - 実行時動作パターン
-   - 実際のデータフロートレース
-   - パフォーマンス特性
+1. **Dynamic Analysis Integration**
+   - Runtime behavior patterns
+   - Actual data flow traces
+   - Performance characteristics
 
-2. **履歴コンテキスト**
-   - Git履歴解析
-   - 以前の脆弱性修正
-   - コード進化パターン
+2. **Historical Context**
+   - Git history analysis
+   - Previous vulnerability fixes
+   - Code evolution patterns
 
-3. **外部コンテキスト**
-   - CVEデータベース統合
-   - セキュリティアドバイザリ相関
-   - フレームワーク固有脆弱性
+3. **External Context**
+   - CVE database integration
+   - Security advisory correlations
+   - Framework-specific vulnerabilities

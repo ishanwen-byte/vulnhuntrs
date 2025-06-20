@@ -1,138 +1,155 @@
-# LLM解析flow
+# LLM Analysis Flow
 
-本文書では、Parsentryがlarge language modelを活用してsource codeのsecurity解析を実行する方法について説明します。
+This document describes how Parsentry utilizes large language models to perform security analysis of source code.
 
-## 概要
+## Overview
 
-解析processは、静的code解析とLLMを使用した脆弱性検出を組み合わせています。systemは最初にsecurityパターンmatchingを使用して潜在的に脆弱なfileを特定し、その後LLMを使用して深度解析を実行し、脆弱性を確認・特性化します。
+The analysis process combines static code analysis with vulnerability detection using LLMs. The system first identifies potentially vulnerable files using security pattern matching, then performs in-depth analysis with LLMs to confirm and characterize vulnerabilities.
 
-## 解析pipeline
+## Analysis Pipeline
 
-### 1. file発見とfiltering
+### 1. File Discovery and Filtering
 
-- repositoryがsource fileをscan
-- fileは以下の基準でfiltering：
-  - 言語support（Rust、Python、JavaScript/TypeScript、Ruby、Go、Java、C/C++、Terraform）
-  - `src/patterns/`directoryで言語別に定義されたsecurityリスクpattern
-  - fileサイズと複雑度の閾値
+- Repository scans source files
+- Files are filtered based on:
+  - Language support (Rust, Python, JavaScript/TypeScript, Ruby, Go, Java, C/C++, Terraform)
+  - Language-specific security risk patterns defined in `src/patterns/` directory
+  - File size and complexity thresholds
 
-### 2. patternベースリスク評価
+### 2. Pattern-Based Risk Assessment
 
-- 各fileは言語固有のsecurityパターン（PAR分類）に対して評価
-- リスクscoreは以下に基づいて計算：
-  - Principal（dataソース）パターン：入力源、requestハンドラー、環境変数等
-  - Action（操作）パターン：data検証、sanitization、hash化等
-  - Resource（リソース）パターン：file操作、database、command実行等
-- MITRE ATT&CK frameworkに基づく攻撃vectorの関連付け
+- Each file is evaluated against language-specific security patterns (PAR classification)
+- Risk scores are calculated based on:
+  - Principal (data source) patterns: Input sources, request handlers, environment variables, etc.
+  - Action (operation) patterns: Data validation, sanitization, hashing, etc.
+  - Resource patterns: File operations, database access, command execution, etc.
+- Association with MITRE ATT&CK framework attack vectors
 
-### 3. code context構築
+### 3. Code Context Construction
 
-- Tree-sitterがsource codeを解析して以下を抽出：
-  - 関数/method定義
-  - 変数参照とdata flow
-  - import文とdependency
-  - commentとdocument
-- semantic情報は潜在的脆弱性の周辺context構築に使用
+- Tree-sitter analyzes source code to extract:
+  - Function/method definitions
+  - Variable references and data flow
+  - Import statements and dependencies
+  - Comments and documentation
+- Semantic information is used to build context around potential vulnerabilities
 
-#### 改進されたcontext追跡
+#### Improved Context Tracking
 
-PAR（Principal-Action-Resource）分類systemにより、context収集が最適化されました：
+The PAR (Principal-Action-Resource) classification system has optimized context collection:
 
-- **Principalパターン**: `find_references()` を使用してdataの流れを前方追跡
-- **Actionパターン**: `find_bidirectional()` を使用してdata処理の前後両方向を追跡
-- **Resourceパターン**: `find_definition()` を使用して定義を後方追跡  
-- **攻撃vector**: MITRE ATT&CK tacticsに基づく脅威の分類
+- **Principal patterns**: Use `find_references()` to track data flow forward
+- **Action patterns**: Use `find_bidirectional()` to track data processing in both directions
+- **Resource patterns**: Use `find_definition()` to track definitions backward
+- **Attack vectors**: Threat classification based on MITRE ATT&CK tactics
 
-これにより、より正確なdata flow解析と脆弱性のcontext理解が可能になります。
+This enables more accurate data flow analysis and better understanding of vulnerability contexts.
 
-### 4. LLM解析
+### 4. LLM Analysis
 
-#### 初期解析
+#### Initial Analysis
 
-1. **prompt構築**：
-   - security解析guidelineを含むsystem prompt
-   - 対象fileの完全なsource code
-   - project context（READMEサマリーがある場合）
-   - JSON形式出力の具体的指示
+1. **Prompt Construction**:
+   - System prompt containing security analysis guidelines
+   - Complete source code of target file
+   - Project context (if README summary exists)
+   - Specific instructions for JSON format output
 
-2. **LLM request**：
-   - API clientが選択されたmodel（OpenAI、Anthropic等）にrequest送信
-   - modelが脆弱性patternのcode解析を実行
-   - responseには脆弱性評価が含まれる
+2. **LLM Request**:
+   - API client sends request to selected model (OpenAI, Anthropic, etc.)
+   - Model analyzes code for vulnerability patterns
+   - Response includes vulnerability assessment
 
-3. **response解析**：
-   - JSON responseがschemaに対して検証
-   - 抽出されるfieldには以下が含まれる：
-     - 特定された脆弱性type
-     - 詳細解析
-     - 概念実証code
-     - 信頼度score
-     - 修復提案
+3. **Response Analysis**:
+   - JSON response is validated against schema
+   - Extracted fields include:
+     - Identified vulnerability types
+     - Detailed analysis
+     - Proof-of-concept code
+     - Confidence score
+     - Remediation suggestions
 
-#### 深度脆弱性解析（オプション）
+#### Deep Vulnerability Analysis (Optional)
 
-特定された脆弱性に対して、システムは標的解析を実行可能：
+Additional analysis performed for high-risk vulnerabilities:
 
-1. **脆弱性固有プロンプト**：
-   - 各脆弱性タイプの専用プロンプトを取得
-   - 既知のバイパス技術とエッジケースを含める
-   - 悪用可能性評価に焦点を当てる
+1. **Chain-of-Thought Analysis**:
+   - LLM performs step-by-step reasoning about vulnerability root causes
+   - Requests detailed explanation of attack vectors
+   - Evaluates impact scope
 
-2. **反復的改善**：
-   - 脆弱性固有コンテキストで再解析
-   - より深い解析に基づいて信頼度スコアを更新
-   - より正確な概念実証コードを生成
+2. **Remediation Guideline Generation**:
+   - Specific code modification suggestions
+   - Secure alternative solutions
+   - Test case proposals
 
-### 5. 結果集約
+### 5. Results Aggregation
 
-- 解析されたすべてのファイルからの発見を結合
-- 信頼度スコアと重要度でソート
-- マークダウンまたはJSONレポートとして出力をフォーマット
+1. **Vulnerability Report Generation**:
+   - Outputs vulnerability details in SARIF format
+   - Includes:
+     - File path and line numbers
+     - Vulnerability type
+     - Confidence score
+     - Remediation guidance
+     - Attack scenarios
 
-## 主要コンポーネント
+2. **Project-Wide Risk Assessment**:
+   - Visualizes vulnerability distribution and density
+   - Calculates technical debt score
+   - Generates prioritized remediation roadmap
 
-### コアモジュール
+## Key Components
 
-- **`src/analyzer.rs`**: メイン解析オーケストレーション
-- **`src/prompts/`**: LLMプロンプトテンプレートとガイドライン
-- **`src/response.rs`**: レスポンススキーマと検証
-- **`src/parser.rs`**: コード解析のためのTree-sitter統合
-- **`src/security_patterns.rs`**: パターンマッチングエンジン
+1. **Parser Engine**:
+   - Manages language-specific parsers
+   - Generates AST and data flow graphs
+   - Extracts code structure and dependencies
 
-### 外部依存関係
+2. **Pattern Library**:
+   - Language-specific security patterns
+   - Risk assessment rules based on PAR classification
+   - MITRE ATT&CK mapping
 
-- **`genai`**: LLM APIクライアント抽象化
-- **`tree-sitter`**: コード解析とAST生成
-- **`serde_json`**: JSONシリアライゼーション/デシリアライゼーション
+## Configuration
 
-## 設定
+### Model Selection
 
-### モデル選択
-
-サポートされるモデル：
-- OpenAI: gpt-4、gpt-4-turbo、gpt-3.5-turbo
-- Anthropic: claude-3-opus、claude-3-sonnet、claude-3-haiku
+Supported models:
+- OpenAI: gpt-4, gpt-4-turbo, gpt-3.5-turbo
+- Anthropic: claude-3-opus, claude-3-sonnet, claude-3-haiku
 - Google: gemini-pro
-- Groq: llama等の高速推論モデル
-- ローカルモデル（Ollama等との互換）
+- Groq: Fast inference models like llama
+- Local models (compatible with Ollama etc.)
 
-### 解析パラメータ
+### Analysis Parameters
 
-- **最大ファイル数**: 解析するファイル数の制限
-- **タイムアウト**: APIリクエストタイムアウト設定
-- **信頼度閾値**: レポート出力の最小スコア
-- **パターン感度**: パターンマッチング厳密度の調整
+- **Max files**: Limit on number of files to analyze
+- **Timeout**: API request timeout settings
+- **Confidence threshold**: Minimum score for reporting
+- **Pattern sensitivity**: Adjustment for pattern matching strictness
 
-## パフォーマンス考慮事項
+## Performance Considerations
 
-1. **並列処理**: 複数ファイルの同時解析
-2. **キャッシュ**: 再解析を避けるための結果キャッシュ
-3. **インクリメンタル解析**: 変更されたファイルのみ解析
-4. **モデル選択**: 精度とコスト/速度のバランス
+1. **Parallel Processing**:
+   - File analysis runs in parallel using worker pool
+   - LLM requests are parallelized with rate limiting
 
-## セキュリティ注意事項
+2. **Caching**:
+   - Caches analysis results to reduce re-analysis
+   - Performs incremental analysis based on change detection
 
-- すべての解析はローカルまたはセキュアAPIを通じて実行
-- 解析以外でコードの保存や送信は行わない
-- APIキーは適切にセキュア化する必要がある
-- 結果はセキュリティ専門家によってレビューされるべき
+3. **Model Selection**:
+   - Balance between accuracy and cost/speed
+
+## Security Considerations
+
+1. **Data Protection**:
+   - Encrypts sensitive code during transmission
+   - Securely manages API keys
+   - Implements proper access control for analysis results
+
+2. **Model Output Validation**:
+   - Validates all LLM outputs
+   - Filters malicious code suggestions
+   - Monitors false positives/negatives
